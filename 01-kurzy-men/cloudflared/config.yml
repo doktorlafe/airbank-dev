@@ -1,0 +1,6 @@
+tunnel: 571edf8b-9520-4b32-84cd-65f70968c713
+credentials-file: /etc/cloudflared/creds.json
+ingress:
+  - hostname: kurzy.thugsclub.eu
+    service: http://kurzy:8000
+  - service: http_status:404

@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kurzy měn</title>
+<meta name="description" content="Kolik dostanete za svou měnu podle dnešního kurzu ČNB.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#E6EBE3;      /* bankovkový papír, chladně zelenošedý */
+  --paper-2:#D9E0D6;
+  --ink:#24224F;        /* tisková modrofialová */
+  --ink-soft:#5B5D80;
+  --guil:#8C9BBE;       /* barva gilošé */
+  --up:#1D6E5E;         /* měděnka */
+  --down:#A3462A;
+  --line:#C3CCC0;
+  --focus:#3D63DD;
+}
+@media (prefers-color-scheme:dark){:root{
+  --paper:#16172B;--paper-2:#1E2038;--ink:#E4E6F2;--ink-soft:#9A9DBA;
+  --guil:#3A4370;--up:#5FC4AD;--down:#E58C6E;--line:#2D3050;--focus:#8FA8FF;
+}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font:400 17px/1.55 "IBM Plex Sans",system-ui,sans-serif;font-variant-numeric:tabular-nums}
+main{max-width:1040px;margin:0 auto;padding:0 16px 64px}
+:focus-visible{outline:3px solid var(--focus);outline-offset:3px;border-radius:4px}
+
+/* ---------- převodník (hero) ---------- */
+.hero{position:relative;min-height:78vh;display:grid;align-content:center;padding:56px 0 40px;overflow:hidden}
+.guilloche{position:absolute;inset:50% auto auto 50%;width:min(1100px,170vw);aspect-ratio:1;
+  transform:translate(-30%,-50%);pointer-events:none;z-index:0}
+.guilloche path{fill:none;stroke:var(--guil);stroke-width:.6;opacity:.75}
+@media (prefers-reduced-motion:no-preference){
+  .guilloche path{stroke-dasharray:var(--len);stroke-dashoffset:var(--len);
+    animation:draw 2.4s cubic-bezier(.3,.6,.2,1) forwards}
+  @keyframes draw{to{stroke-dashoffset:0}}
+}
+.hero > *:not(.guilloche){position:relative;z-index:1}
+.date{margin:0 0 28px;color:var(--ink-soft)}
+.sentence{font:600 clamp(32px,6vw,68px)/1.12 "Bricolage Grotesque",sans-serif;
+  letter-spacing:-.02em;margin:0;max-width:16ch}
+.sentence input,.sentence select{font:inherit;color:inherit;letter-spacing:inherit;
+  background:transparent;border:0;border-bottom:3px solid var(--ink);padding:0 .05em;border-radius:0}
+.sentence input{width:5ch;text-align:right}
+.sentence select{cursor:pointer;appearance:none;padding-right:.1em}
+.sentence input::-webkit-inner-spin-button{display:none}
+.result{display:block;margin-top:.25em;font-weight:800;font-size:clamp(52px,12vw,148px);
+  line-height:1;letter-spacing:-.045em;font-variation-settings:"opsz" 96;word-break:break-word}
+.result small{font-size:.32em;font-weight:600;letter-spacing:-.01em;margin-left:.15em}
+.swap{margin-top:28px;font:500 16px/1 "IBM Plex Sans",sans-serif;color:var(--ink);
+  background:var(--paper);border:1.5px solid var(--ink);border-radius:999px;padding:12px 20px;cursor:pointer}
+.swap:hover{background:var(--ink);color:var(--paper)}
+.note{margin:16px 0 0;color:var(--ink-soft);font-size:15px;max-width:52ch}
+
+/* ---------- lístek ---------- */
+.board h2{font:600 28px/1.2 "Bricolage Grotesque",sans-serif;letter-spacing:-.01em;margin:0 0 6px}
+.board > p{margin:0 0 20px;color:var(--ink-soft);max-width:60ch}
+.filter{font:inherit;width:100%;max-width:340px;padding:10px 14px;margin-bottom:12px;color:var(--ink);
+  background:var(--paper-2);border:1px solid var(--line);border-radius:8px}
+table{width:100%;border-collapse:collapse}
+th{font-weight:500;font-size:14px;color:var(--ink-soft);text-align:right;padding:8px 10px;border-bottom:1.5px solid var(--ink)}
+td{padding:11px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+tbody tr{cursor:pointer}
+tbody tr:hover,tbody tr[aria-selected=true]{background:var(--paper-2)}
+.code{font:600 18px "Bricolage Grotesque",sans-serif;margin-right:10px}
+.name{color:var(--ink-soft)}
+.up{color:var(--up)} .down{color:var(--down)}
+.bank small{display:block;color:var(--ink-soft);font-size:13px}
+.best{color:var(--up);font-weight:600}
+.offers{list-style:none;margin:22px 0 0;padding:0;max-width:560px;font-size:16px}
+.offers li{display:flex;justify-content:space-between;gap:16px;padding:9px 0;border-bottom:1px solid var(--line)}
+.offers li span:last-child{font-weight:600}
+.offers li.ref{color:var(--ink-soft)} .offers li.ref span:last-child{font-weight:400}
+.offers li:first-child span{color:var(--up)}
+.table-wrap{overflow-x:auto}
+@media (max-width:620px){.name{display:none}}
+footer{margin-top:48px;color:var(--ink-soft);font-size:14px;max-width:62ch}
+footer a{color:inherit}
+</style>
+</head>
+<body>
+<main>
+  <section class="hero" aria-labelledby="conv">
+    <svg class="guilloche" viewBox="-500 -500 1000 1000" aria-hidden="true"></svg>
+    <p class="date" id="date"></p>
+    <h1 class="sentence" id="conv">
+      <span>Za</span>
+      <input id="amt" type="number" inputmode="decimal" value="100" min="0" step="any" aria-label="Částka">
+      <span id="czk" hidden>Kč</span>
+      <select id="cur" aria-label="Měna"></select>
+      <span id="mid">dostanete</span>
+      <output class="result" id="res" for="amt cur" aria-live="polite"></output>
+    </h1>
+    <ol class="offers" id="offers" aria-label="Srovnání bank"></ol>
+    <button class="swap" id="swap" type="button">Převést opačně</button>
+    <p class="note" id="note"></p>
+  </section>
+
+  <section class="board" aria-labelledby="board-h">
+    <h2 id="board-h">Kurzovní lístek</h2>
+    <p id="board-p"></p>
+    <input class="filter" id="q" type="search" placeholder="Hledat měnu nebo zemi" aria-label="Hledat měnu">
+    <div class="table-wrap"><table>
+      <thead><tr>
+        <th scope="col">Měna</th><th scope="col">1 jednotka</th><th scope="col">Změna</th>
+      </tr></thead>
+      <tbody id="rows"></tbody>
+    </table></div>
+  </section>
+
+  <footer>
+    Neoficiální přehled, údaje jsou orientační. Zdroje: kurzovní lístky Komerční banky a Fio banky (bezhotovostní kurzy), denní kurz <a href="https://www.cnb.cz/cs/financni-trhy/devizovy-trh/kurzy-devizoveho-trhu/kurzy-devizoveho-trhu/">České národní banky</a>.
+    Banky a směnárny obvykle účtují přirážku, skutečná částka bude nižší. Data ve formátu JSON: <a href="/api/rates">/api/rates</a>.
+  </footer>
+</main>
+
+<script>
+const R = $data, M = $meta;
+const el = id => document.getElementById(id);
+const nf = (n, d = 2) => n.toLocaleString("cs-CZ", {minimumFractionDigits: d, maximumFractionDigits: d});
+let toCzk = true;
+
+/* gilošé – překrývající se hypotrochoidy jako na bankovce */
+(function guilloche(svg) {
+  const ns = "http://www.w3.org/2000/svg";
+  for (let k = 0; k < 6; k++) {
+    const R0 = 300 + k * 26, r = 47 + k * 3, d = 120 - k * 9, pts = [];
+    for (let t = 0; t <= Math.PI * 2 * r / 1; t += 0.02) {
+      const x = (R0 - r) * Math.cos(t) + d * Math.cos((R0 - r) / r * t);
+      const y = (R0 - r) * Math.sin(t) - d * Math.sin((R0 - r) / r * t);
+      pts.push(x.toFixed(1) + " " + y.toFixed(1));
+    }
+    const p = document.createElementNS(ns, "path");
+    p.setAttribute("d", "M" + pts.join("L"));
+    svg.appendChild(p);
+    const len = p.getTotalLength();
+    p.style.setProperty("--len", len);
+    p.style.animationDelay = k * 0.12 + "s";
+  }
+})(document.querySelector(".guilloche"));
+
+el("date").textContent = "Kurz ČNB platný od " + M.day;
+el("board-p").textContent = M.prevDay
+  ? "Kolik korun stojí jedna jednotka měny. Změna je oproti " + M.prevDay + ". U bank je velkým číslem cena, za kterou měnu prodávají, menším cena výkupu. Nejlevnější prodej je zvýrazněný. Klepnutím na řádek měnu převedete."
+  : "Kolik korun stojí jedna jednotka měny. Klepnutím na řádek měnu převedete.";
+for (const b of M.banks) {
+  const th = document.createElement("th"); th.scope = "col"; th.textContent = b;
+  document.querySelector("thead tr").append(th);
+}
+
+for (const r of R) el("cur").add(new Option(r.code, r.code));
+
+function cur() { return R.find(x => x.code === el("cur").value); }
+/* nabídky bank seřazené od nejvýhodnější; kurz: prodáváte měnu → buy, kupujete → sell */
+function offers(r, a) {
+  const get = k => toCzk ? a * k : a / k;
+  const list = Object.entries(r.banks).map(([n, b]) => ({n, v: get(toCzk ? b.buy : b.sell)}));
+  return list.sort((x, y) => y.v - x.v);
+}
+function calc() {
+  const r = cur(), a = Math.max(0, parseFloat(el("amt").value) || 0);
+  const unit = toCzk ? "Kč" : r.code, list = offers(r, a);
+  const best = list[0], ref = toCzk ? a * r.cnb : a / r.cnb;
+  el("res").innerHTML = nf(best ? best.v : ref) + "<small></small>";
+  el("res").lastChild.textContent = unit;
+  const ol = el("offers"); ol.textContent = "";
+  for (const o of list) {
+    const li = document.createElement("li");
+    li.innerHTML = "<span></span><span></span>";
+    li.firstChild.textContent = o.n; li.lastChild.textContent = nf(o.v) + " " + unit;
+    ol.append(li);
+  }
+  const li = document.createElement("li"); li.className = "ref";
+  li.innerHTML = "<span>Kurz ČNB bez přirážky</span><span></span>";
+  li.lastChild.textContent = nf(ref) + " " + unit; ol.append(li);
+  el("note").textContent = !best
+    ? "Tuto měnu žádná ze sledovaných bank nesměňuje, ukazujeme přepočet podle ČNB."
+    : list.length > 1
+      ? "Nejvíc dostanete u: " + best.n + ". Proti nejhorší nabídce ušetříte " + nf(Math.abs(best.v - list.at(-1).v)) + " " + unit + "."
+      : "Měnu směňuje jen " + best.n + ".";
+  el("cur").setAttribute("aria-label", toCzk ? "Měna, kterou máte" : "Měna, kterou chcete");
+  for (const tr of el("rows").rows) tr.setAttribute("aria-selected", tr.dataset.code === r.code);
+}
+function syncSentence() {
+  /* „Za 100 [EUR] dostanete 2 445 Kč“ ↔ „Za 2 500 Kč dostanete v [EUR] 102 EUR“ */
+  el("czk").hidden = toCzk;
+  el("mid").textContent = toCzk ? "dostanete" : "dostanete v";
+  if (toCzk) el("amt").after(el("cur")); else el("mid").after(el("cur"));
+}
+el("swap").onclick = () => {
+  const r = cur(), a = parseFloat(el("amt").value) || 0;
+  el("amt").value = toCzk ? Math.round(a * r.cnb) : +(a / r.cnb).toFixed(2);
+  toCzk = !toCzk; syncSentence(); calc();
+};
+el("amt").oninput = el("cur").onchange = calc;
+
+function draw(q = "") {
+  q = q.trim().toLowerCase();
+  const tb = el("rows"); tb.textContent = "";
+  for (const r of R) {
+    if (q && !(r.code.toLowerCase().includes(q) || r.name.toLowerCase().includes(q))) continue;
+    const tr = tb.insertRow(); tr.dataset.code = r.code; tr.tabIndex = 0;
+    const ch = r.change == null ? "–" : (r.change > 0 ? "+" : "") + nf(r.change) + " %";
+    const cls = r.change > 0 ? "up" : r.change < 0 ? "down" : "";
+    const bs = M.banks.map(n => r.banks[n]).filter(Boolean);
+    const bestSell = Math.min(...bs.map(b => b.sell));
+    const cell = b => !b ? "<td>–</td>" :
+      '<td class="bank"><span class="' + (b.sell === bestSell && bs.length > 1 ? "best" : "") + '">' + nf(b.sell, 3) +
+      '</span><small>výkup ' + nf(b.buy, 3) + "</small></td>";
+    tr.innerHTML = '<td><span class="code"></span><span class="name"></span></td>' +
+      "<td>" + nf(r.cnb, 3) + '</td><td class="' + cls + '">' + ch + "</td>" +
+      M.banks.map(n => cell(r.banks[n])).join("");
+    tr.querySelector(".code").textContent = r.code;
+    tr.querySelector(".name").textContent = r.name;
+    const pick = () => { el("cur").value = r.code; calc(); window.scrollTo({top: 0, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"}); el("amt").focus({preventScroll: true}); };
+    tr.onclick = pick; tr.onkeydown = e => { if (e.key === "Enter") pick(); };
+  }
+  if (!tb.rows.length) tb.insertRow().innerHTML = '<td colspan="9">Žádná měna neodpovídá. Zkuste kód, např. EUR, nebo název země.</td>';
+  calc();
+}
+el("q").oninput = e => draw(e.target.value);
+draw();
+</script>
+</body>
+</html>

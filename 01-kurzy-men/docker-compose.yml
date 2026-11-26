@@ -1,0 +1,15 @@
+services:
+  kurzy:
+    build: .
+    restart: unless-stopped
+    ports: ["127.0.0.1:8000:8000"]   # lokální přístup; ven jen přes tunel
+
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    user: "1000:1000"                # aby přečetl creds soubor vlastněný tebou (0400)
+    command: tunnel --no-autoupdate --config /etc/cloudflared/config.yml run
+    volumes:
+      - ./cloudflared/config.yml:/etc/cloudflared/config.yml:ro
+      - ${HOME}/.cloudflared/571edf8b-9520-4b32-84cd-65f70968c713.json:/etc/cloudflared/creds.json:ro
+    depends_on: [kurzy]
